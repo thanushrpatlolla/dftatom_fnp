@@ -4,7 +4,8 @@ function gaussian3p_rho_internal(param_c, param_z, param_w, r_val)
     real(dp), intent(in) :: param_c, param_z, param_w, r_val
     real(dp) :: gaussian3p_rho_internal
 
-    gaussian3p_rho_internal = (1.0_dp + param_w * (r_val**2) / param_c**2) / (1.0_dp + dexp(((r_val**2) - (param_c**2)) / (param_z**2)))
+    gaussian3p_rho_internal = (1.0_dp + param_w * (r_val**2) / param_c**2)&
+                             / (1.0_dp + dexp(((r_val**2) - (param_c**2)) / (param_z**2)))
 
 end function gaussian3p_rho_internal
 
@@ -14,13 +15,10 @@ subroutine gaussian3p_charge_density(d, rho_out)
     use utils, only: stop_error
     implicit none
 
-    type(dft_data_t), intent(inout) :: d ! Changed to inout
+    type(dft_data_t), intent(inout) :: d
     real(dp), dimension(size(d%R)), intent(out) :: rho_out
-    ! real(dp), intent(out) :: nuclear_radius_out ! Removed
 
     real(dp) :: param_c, param_z, param_w
-    ! real(dp) :: r_val_local ! Removed
-    ! real(dp) :: current_rho_val ! Removed
     integer :: i_r
     real(dp) :: cutoff_rho_val
     logical :: cutoff_reached

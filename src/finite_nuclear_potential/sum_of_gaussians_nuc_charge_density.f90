@@ -23,8 +23,10 @@ function sog_rho_internal(d, r_val)
     do i_sog_param = 1, num_sog_terms_local
         r_i_local = d%sog_parameters(i_sog_param, 1)
         q_i_local = d%sog_parameters(i_sog_param, 2)
-        a_i = (real(d%Z, dp) * q_i_local) / (2.0_dp * (pi**1.5_dp) * (gamma_local**3) * (1.0_dp + (2.0_dp * r_i_local**2) / (gamma_local**2)))
-        sog_rho_internal = sog_rho_internal + a_i * (dexp(-1.0_dp * ((r_val - r_i_local) / gamma_local)**2) + dexp(-1.0_dp * ((r_val + r_i_local) / gamma_local)**2))
+        a_i = (real(d%Z, dp) * q_i_local) / (2.0_dp * (pi**1.5_dp)&
+             * (gamma_local**3) * (1.0_dp + (2.0_dp * r_i_local**2) / (gamma_local**2)))
+        sog_rho_internal = sog_rho_internal + a_i * (dexp(-1.0_dp * ((r_val - r_i_local) &
+                        / gamma_local)**2) + dexp(-1.0_dp * ((r_val + r_i_local) / gamma_local)**2))
     end do
 
 end function sog_rho_internal

@@ -15,6 +15,7 @@ use dft
 use rpoisson
 use drivers
 use energies
+use finite_nuclear_potential_mod
 implicit none
 private
 public dp, E_nl, get_atomic_states_nonrel, mesh_exp, stop_error, &

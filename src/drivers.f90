@@ -16,6 +16,7 @@ use mesh, only: mesh_exp, mesh_exp_deriv
 use energies, only: get_hydrogen_energies, thomas_fermi_potential, E_nl
 use dft_data, only: dft_data_t
 use mixings, only: mixing_anderson
+use finite_nuclear_potential_mod
 implicit none
 
 private
@@ -85,9 +86,9 @@ logical, intent(in) :: perturb
 ! Should finite nuclear potential be used (.true. = yes)
 logical, intent(in), optional :: use_finite_nuclear
 integer, optional, intent(in) :: nuclear_model_type_in
-real(dp), dimension(:), optional, intent(in) :: rho_nuc_distro_parameters_in
-real(dp), dimension(:), optional, intent(in) :: fb_coefficients_in
-real(dp), dimension(:,:), optional, intent(in) :: sog_parameters_in
+real(dp), optional, intent(in), target :: rho_nuc_distro_parameters_in(:)
+real(dp), optional, intent(in), target :: fb_coefficients_in(:)
+real(dp), optional, intent(in), target :: sog_parameters_in(:,:)
 real(dp), optional, intent(in) :: min_nuc_rho_cutoff_in
 
 ! ## Output arguments:
@@ -212,7 +213,7 @@ subroutine atom_rlda(Z, r_min, r_max, a, N, c, no, lo, so, fo, ks_energies, &
     E_tot, &
     R, Rp, V_tot, density, orbitals, reigen_eps, reigen_max_iter, &
     mixing_eps, mixing_alpha, &
-    mixing_max_iter, perturb, c, &
+    mixing_max_iter, perturb,&
     use_finite_nuclear, nuclear_model_type_in, &
     rho_nuc_distro_parameters_in, fb_coefficients_in, sog_parameters_in, min_nuc_rho_cutoff_in)
 ! Solves the relativistic radial Kohn-Sham equations for an atom.
@@ -244,9 +245,9 @@ logical, intent(in) :: perturb
 ! Should finite nuclear potential be used (.true. = yes)
 logical, intent(in), optional :: use_finite_nuclear
 integer, optional, intent(in) :: nuclear_model_type_in
-real(dp), dimension(:), optional, intent(in) :: rho_nuc_distro_parameters_in
-real(dp), dimension(:), optional, intent(in) :: fb_coefficients_in
-real(dp), dimension(:,:), optional, intent(in) :: sog_parameters_in
+real(dp), optional, intent(in), target :: rho_nuc_distro_parameters_in(:)
+real(dp), optional, intent(in), target :: fb_coefficients_in(:)
+real(dp), optional, intent(in), target :: sog_parameters_in(:,:)
 real(dp), optional, intent(in) :: min_nuc_rho_cutoff_in
 
 

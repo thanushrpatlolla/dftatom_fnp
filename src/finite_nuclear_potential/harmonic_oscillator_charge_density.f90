@@ -14,12 +14,10 @@ subroutine harmonic_oscillator_charge_density(d, rho_out)
     use utils, only: stop_error
     implicit none
 
-    type(dft_data_t), intent(inout) :: d ! Changed to inout
+    type(dft_data_t), intent(inout) :: d
     real(dp), dimension(size(d%R)), intent(out) :: rho_out
 
-    real(dp) :: param_a, param_alpha, param_radius_rms ! radius_rms is also a parameter here
-    ! real(dp) :: r_val_local ! Removed
-    ! real(dp) :: current_rho_val ! Removed
+    real(dp) :: param_a, param_alpha, param_radius_rms 
     integer :: i_r
     real(dp) :: cutoff_rho_val
     logical :: cutoff_reached
