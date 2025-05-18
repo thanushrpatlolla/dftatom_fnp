@@ -5,7 +5,7 @@ module reigen
 use types, only: dp
 use ode1d, only: integrate, normalize, parsefunction, get_n_nodes, get_min_idx
 use rschroed, only: schroed_outward_adams, schroed_inward_adams
-use rdirac, only: dirac_outward_adams, dirac_inward_adams
+use rdirac, only: dirac_outward_adams, dirac_inward_adams, use_fnp
 use utils, only: stop_error
 
 implicit none
@@ -116,7 +116,8 @@ is_E_above = nods_actual > n-l-1
 end function
 
 subroutine solve_radial_eigenproblem(n, l, Ein, eps, max_iter, &
-    R, Rp, V, Z, c, relat, perturb, Emin_init, Emax_init, converged, E, P, Q)
+    R, Rp, V, Z, c, relat, perturb, Emin_init, Emax_init, converged, E, P, Q,&
+    use_finite_nuclear)
 ! Solves the radial Dirac (Schroedinger) equation and returns the eigenvalue
 ! (E) and normalized eigenvector (P, Q) for the given "n" and "l".
 !
@@ -158,7 +159,7 @@ logical, intent(in) :: perturb
 real(dp), intent(in) :: Emin_init, Emax_init
 integer, intent(out) :: converged
 real(dp), intent(out) :: P(:), Q(:), E
-
+logical, intent(in), optional :: use_finite_nuclear
 
 real(dp) :: Emin, Emax, dE, Pr(size(R)), Qr(size(R)), factor, S
 integer :: minidx, ctp, iter
@@ -166,6 +167,11 @@ logical :: isbig
 integer :: nnodes
 logical :: last_bisect
 integer :: imin, imax
+
+if (present(use_finite_nuclear)) then
+    use_fnp = use_finite_nuclear
+endif
+
 E = Ein
 if (.not.(n > 0)) call stop_error("n > 0 not satisfied")
 if (.not.((0 <= l).and.(l < n))) call stop_error("0 <= l < n not satisfied")

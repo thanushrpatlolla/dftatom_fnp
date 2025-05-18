@@ -15,6 +15,18 @@ set(SRC
     drivers.f90
     energies.f90
 
+    finite_nuclear_potential/calculate_fourier_bessel_rho.f90
+    finite_nuclear_potential/const_charge_density.f90
+    finite_nuclear_potential/fermi2p_charge_density.f90
+    finite_nuclear_potential/fermi3p_charge_density.f90
+    finite_nuclear_potential/finite_nuclear_potential.f90
+    finite_nuclear_potential/gaussian3p_charge_density.f90
+    finite_nuclear_potential/harmonic_oscillator_charge_density.f90
+    finite_nuclear_potential/mod_harmonic_oscillator_rho.f90
+    finite_nuclear_potential/normalize_rho_log.f90
+    finite_nuclear_potential/nuc_pot_log_grid.f90
+    finite_nuclear_potential/sum_of_gaussians_nuc_charge_density.f90
+
     ode1d_other.f90
     rschroed_other.f90
     rdirac_other.f90

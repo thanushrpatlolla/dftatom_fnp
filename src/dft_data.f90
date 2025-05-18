@@ -25,6 +25,17 @@ type dft_data_t
     ! Total energy (and its parts):
     real(dp) :: Ekin, Ecoul, Exc, Eenuc, Etot
     logical :: perturb ! use perturbation acceleration in the eigenproblem
+
+
+    ! Parameters for finite nuclear potential model
+    logical :: fnp !if true use a finite_nuclear_potential, V_coulomb is modified
+    integer :: nuclear_model_type ! Type of nuclear model
+    real(dp) :: nuclear_radius ! radius of the nucleus when using finite nuclear potential
+    real(dp), dimension(:), pointer :: rho_nuc_distro_parameters !(size based on model)
+    real(dp), dimension(:), pointer :: fb_coefficients           !(size based on model)
+    real(dp), dimension(:,:), pointer :: sog_parameters          !(size based on model)
+    ! Default cutoff for nuclear charge density
+    real(dp) :: min_nuc_rho_cutoff = 1.0e-8_dp
 end type
 
 end module

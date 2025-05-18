@@ -10,7 +10,10 @@ use utils, only: stop_error
 
 implicit none
 private
-public dirac_outward_adams, dirac_inward_adams
+
+logical :: use_fnp = .false.
+
+public dirac_outward_adams, dirac_inward_adams, use_fnp
 
 
 contains
@@ -285,7 +288,7 @@ real(dp) :: beta, Z1
 integer :: l
 
 beta = sqrt(kappa**2-(Z/c)**2)
-if (Z /= 0) then
+if (Z /= 0 .and. .not.use_fnp) then
     y(1) = R(1)**beta
     y(2) = R(1)**beta * c * (beta + kappa) / Z
 else

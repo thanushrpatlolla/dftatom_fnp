@@ -41,13 +41,17 @@ else
 end if
 end function
 
-function thomas_fermi_potential(R, Z, cut) result(V)
+function thomas_fermi_potential(R, Z, cut, use_finite_nuclear, nuclear_radius) result(V)
 ! Generalized Thomas-Fermi atomic potential
 real(dp), intent(in) :: R(:) ! Radial grid
 integer, intent(in) :: Z     ! Atomic number
 logical, intent(in), optional :: cut ! Cut the potential, default .true.
+logical, intent(in), optional :: use_finite_nuclear ! Use finite nuclear potential, default .false.
+real(dp), intent(in), optional :: nuclear_radius ! Nuclear radius, default 0.0_dp
 real(dp) :: x(size(R)), Z_eff(size(R)), V(size(R))
 real(dp) :: alpha, beta, gamma
+integer :: i_nuc
+integer :: i
 
 x = R * (128*Z/(9*pi**2)) ** (1.0_dp/3)
 ! Z_eff(x) = Z * phi(x), where phi(x) satisfies the Thomas-Fermi equation:
@@ -65,14 +69,30 @@ Z_eff = Z * (1 + alpha*sqrt(x) + beta*x*exp(-gamma*sqrt(x)))**2 * &
 ! This keeps all the eigenvalues of the radial problem negative:
 if (.not. present(cut)) where (Z_eff < 1) Z_eff = 1
 V = -Z_eff / r
+
+!Modify the potential to level off quadratically in the case of a finite nuclear charge
+if (present(use_finite_nuclear).and.use_finite_nuclear) then
+    i_nuc = minloc(R, mask = (R >= nuclear_radius), dim = 1)
+    do i=1, i_nuc-1
+        V(i)=(V(i_nuc+1)-V(i_nuc))/(R(i_nuc+1)-R(i_nuc)) & !V'(i_nuc)
+                *(R(i)**2-R(i_nuc)**2)/(2.0d0*R(i_nuc))+V(i_nuc)
+    enddo
+endif
+
 end function
 
-function thomas_fermi_density(R, Z) result(rho)
+function thomas_fermi_density(R, Z, use_finite_nuclear, nuclear_radius) result(rho)
 ! Generalized Thomas-Fermi atomic potential
 real(dp), intent(in) :: R(:) ! Radial grid
 integer, intent(in) :: Z     ! Atomic number
+logical, intent(in), optional :: use_finite_nuclear ! Use finite nuclear potential, default .false.
+real(dp), intent(in), optional :: nuclear_radius ! Nuclear radius, default 0.0_dp
 real(dp) :: V(size(R)), rho(size(R))
-V = thomas_fermi_potential(R, Z, .false.)
+if (present(use_finite_nuclear).and.use_finite_nuclear) then
+    V = thomas_fermi_potential(R, Z, .false., use_finite_nuclear, nuclear_radius)
+else
+    V = thomas_fermi_potential(R, Z, .false.)
+endif
 rho = -1 / (3*pi**2) * (-2*V)**(3._dp/2)
 end function
 

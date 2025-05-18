@@ -50,7 +50,9 @@ end function
 subroutine atom_lda(Z, r_min, r_max, a, N, no, lo, fo, ks_energies, E_tot, &
     R, Rp, V_tot, density, orbitals, reigen_eps, reigen_max_iter, &
     mixing_eps, mixing_alpha, &
-    mixing_max_iter, perturb)
+    mixing_max_iter, perturb, &
+    use_finite_nuclear, nuclear_model_type_in, &
+    rho_nuc_distro_parameters_in, fb_coefficients_in, sog_parameters_in, min_nuc_rho_cutoff_in)
 ! Solves the non-relativistic radial Kohn-Sham equations for an atom.
 !
 ! The description of the algorithm, the radial mesh and other details can be
@@ -80,6 +82,13 @@ real(dp), intent(in) :: mixing_alpha
 integer, intent(in) :: mixing_max_iter
 ! Should perturbation correction be used (.true. = yes)
 logical, intent(in) :: perturb
+! Should finite nuclear potential be used (.true. = yes)
+logical, intent(in), optional :: use_finite_nuclear
+integer, optional, intent(in) :: nuclear_model_type_in
+real(dp), dimension(:), optional, intent(in) :: rho_nuc_distro_parameters_in
+real(dp), dimension(:), optional, intent(in) :: fb_coefficients_in
+real(dp), dimension(:,:), optional, intent(in) :: sog_parameters_in
+real(dp), optional, intent(in) :: min_nuc_rho_cutoff_in
 
 ! ## Output arguments:
 ! Occupation numbers
@@ -115,12 +124,48 @@ deallocate(no_a, lo_a, fo_a)
 R = mesh_exp(r_min, r_max, a, N)
 Rp = mesh_exp_deriv(r_min, r_max, a, N)
 
+d%Z = Z
+d%R => R
+d%Rp => Rp
+
+if (present(use_finite_nuclear)) then
+    d%fnp = use_finite_nuclear
+else
+    d%fnp = .false.
+end if
+if (use_finite_nuclear) then
+    d%nuclear_model_type = nuclear_model_type_in
+else
+    d%nuclear_model_type = 0 ! Default to point nucleus if type isn't specified explicitly by user
+    d%nuclear_radius = 0.0_dp
+endif
+if (present(min_nuc_rho_cutoff_in)) then
+    d%min_nuc_rho_cutoff = min_nuc_rho_cutoff_in
+endif
+if (present(rho_nuc_distro_parameters_in)) then
+    d%rho_nuc_distro_parameters => rho_nuc_distro_parameters_in
+endif
+if (present(fb_coefficients_in)) then
+    d%fb_coefficients => fb_coefficients_in
+endif
+if (present(sog_parameters_in)) then
+    d%sog_parameters => sog_parameters_in
+endif
+
+
 !V_tot = -Z / R
 ks_energies = get_hydrogen_energies(Z, no)
-V_tot = thomas_fermi_potential(R, Z)
+
+! Modified Thomas-Fermi potential that levels off at r=0
+V_tot = thomas_fermi_potential(R, Z, use_finite_nuclear=use_finite_nuclear, nuclear_radius=d%nuclear_radius)
 !ks_energies = get_tf_energies(Z, no, fo)
 
-V_coulomb = -Z/R
+if(use_finite_nuclear) then
+    call finite_nuclear_potential(d) !overwrites d%V_coulomb with the finite nuclear potential
+    V_coulomb = d%V_coulomb
+else
+    V_coulomb = -Z/R
+endif
 
 ! We allow a few unbounded states
 Emax_init = 10
@@ -132,9 +177,6 @@ end do
 Emin_init = 1.1_dp * Emin_init
 
 
-d%Z = Z
-d%R => R
-d%Rp => Rp
 d%rho => density
 d%V_h => V_h
 d%V_coulomb => V_coulomb
@@ -153,10 +195,8 @@ d%fo => fo
 d%ks_energies => ks_energies
 d%Emax_init => Emax_init
 d%Emin_init => Emin_init
-! Start from an initial density instead:
-!d%rho = 1 / cosh(d%R)**2
-!d%rho = d%rho * d%Z / integrate(d%Rp, 4*pi*d%rho*d%R**2)
-!call rho2V(d)
+
+
 tmp = mixing_anderson(KS_step, d%V_tot - d%V_coulomb, mixing_max_iter, &
     .true., d, mixing_alpha, mixing_eps)
 E_tot = d%Etot
@@ -172,7 +212,21 @@ subroutine atom_rlda(Z, r_min, r_max, a, N, c, no, lo, so, fo, ks_energies, &
     E_tot, &
     R, Rp, V_tot, density, orbitals, reigen_eps, reigen_max_iter, &
     mixing_eps, mixing_alpha, &
-    mixing_max_iter, perturb)
+    mixing_max_iter, perturb, c, &
+    use_finite_nuclear, nuclear_model_type_in, &
+    rho_nuc_distro_parameters_in, fb_coefficients_in, sog_parameters_in, min_nuc_rho_cutoff_in)
+! Solves the relativistic radial Kohn-Sham equations for an atom.
+!
+! The description of the algorithm, the radial mesh and other details can be
+! found in [1].
+!
+! [1] Ondřej Čertík, John E. Pask, Jiří Vackář, dftatom: A robust and general
+! Schrödinger and Dirac solver for atomic structure calculations, Computer
+! Physics Communications, Volume 184, Issue 7, July 2013, Pages 1777-1791, ISSN
+! 0010-4655, 10.1016/j.cpc.2013.02.014.
+!
+! ## Input arguments:
+! Atomic number
 integer, intent(in) :: Z
 real(dp), intent(in) :: r_min, r_max, a, c
 integer, intent(in) :: N
@@ -187,6 +241,14 @@ real(dp), intent(out), target :: orbitals(:, :)
 real(dp), intent(in) :: reigen_eps, mixing_eps, mixing_alpha
 integer, intent(in) :: mixing_max_iter, reigen_max_iter
 logical, intent(in) :: perturb
+! Should finite nuclear potential be used (.true. = yes)
+logical, intent(in), optional :: use_finite_nuclear
+integer, optional, intent(in) :: nuclear_model_type_in
+real(dp), dimension(:), optional, intent(in) :: rho_nuc_distro_parameters_in
+real(dp), dimension(:), optional, intent(in) :: fb_coefficients_in
+real(dp), dimension(:,:), optional, intent(in) :: sog_parameters_in
+real(dp), optional, intent(in) :: min_nuc_rho_cutoff_in
+
 
 integer, pointer :: no_a(:), lo_a(:), so_a(:)
 real(dp), pointer :: fo_a(:)
@@ -206,12 +268,45 @@ deallocate(no_a, lo_a, so_a, fo_a)
 R = mesh_exp(r_min, r_max, a, N)
 Rp = mesh_exp_deriv(r_min, r_max, a, N)
 
+d%Z = Z
+d%R => R
+d%Rp => Rp
+if (present(use_finite_nuclear)) then
+    d%fnp = use_finite_nuclear
+else
+    d%fnp = .false.
+end if
+if (use_finite_nuclear) then
+    d%nuclear_model_type = nuclear_model_type_in
+else
+    d%nuclear_model_type = 0 ! Default to point nucleus if type isn't specified explicitly by user
+    d%nuclear_radius = 0.0_dp
+endif
+if (present(min_nuc_rho_cutoff_in)) then
+    d%min_nuc_rho_cutoff = min_nuc_rho_cutoff_in
+endif
+if (present(rho_nuc_distro_parameters_in)) then
+    d%rho_nuc_distro_parameters => rho_nuc_distro_parameters_in
+endif
+if (present(fb_coefficients_in)) then
+    d%fb_coefficients => fb_coefficients_in
+endif
+if (present(sog_parameters_in)) then
+    d%sog_parameters => sog_parameters_in
+endif
+
+
 !V_tot = -Z / R
 ks_energies = get_hydrogen_energies(Z, no)
-V_tot = thomas_fermi_potential(R, Z)
+V_tot = thomas_fermi_potential(R, Z, use_finite_nuclear=use_finite_nuclear, nuclear_radius=d%nuclear_radius)
 !ks_energies = get_tf_energies(Z, no, fo)
 
-V_coulomb = -Z/R
+if(use_finite_nuclear) then
+    call finite_nuclear_potential(d) !overwrites d%V_coulomb with the finite nuclear potential
+    V_coulomb = d%V_coulomb
+else
+    V_coulomb = -Z/R
+endif
 
 ! We allow a few unbounded states
 Emax_init = 10
@@ -228,9 +323,6 @@ end do
 Emin_init = 1.1_dp * Emin_init
 
 
-d%Z = Z
-d%R => R
-d%Rp => Rp
 d%rho => density
 d%V_h => V_h
 d%V_coulomb => V_coulomb
